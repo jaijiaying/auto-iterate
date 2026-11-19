@@ -1,6 +1,6 @@
 # 评测量表（Skill 模式）
 
-对每一轮 skill 产物，相对 `goal`、`done_when`、`lock`、`acceptance`、`smoke_cases` 打分。必须实际阅读改后的文件；有试跑则结合试跑证据。
+仅当 `iterate_mode: skill` 时使用。先按 [02-round-protocol.md](02-round-protocol.md) 完成 **Expected vs Actual**（对照 `expected_checklist`），再打分。必须实际阅读改后的文件；有试跑则结合试跑证据。
 
 ## 五维分数
 
@@ -58,18 +58,20 @@
 
 ## 硬伤 hard_fail（任一即 fail）
 
-- `done_when` 中任一条未满足
-- 破坏 `lock`（如改掉禁止动的资产路径、客户硬约束）
-- `description` 缺失或无法用于发现/触发
-- 入口要求读取的 reference 不存在或循环矛盾到无法执行
-- 明确的错误指令（与宿主协议或已知安全边界冲突）
+- 清单硬性项 `unmet` 或 `done_when` 未满足
+- 破坏 `lock`（资产路径、客户硬约束等）
+- 上轮已 met 的规则项本轮回归
+- `description` 缺失或无法发现/触发
+- 入口要读的 reference 不存在或矛盾到无法执行
+- 与宿主协议或安全边界冲突的错误指令
 - `acceptance` 任一条未满足
-- 有 `smoke_cases` 时主用例出现与 `goal` 相反的结果
+- 有 `smoke_cases` 时主用例结果与 `goal` 相反
 
 ## 达标判定
 
 ```
 pass  ⟺  hard_fail 为空
+      ∧  清单硬性项全部 met
       ∧  score_goal_fit ≥ 4
       ∧  score_clarity ≥ 4
       ∧  score_executability ≥ 4
@@ -78,8 +80,11 @@ pass  ⟺  hard_fail 为空
       ∧  done_when 与 acceptance 满足
 ```
 
+同步更新 `best_so_far`（见 02）。
+
 ## 评测写法要求
 
-- 低分项必须引用**文件路径 + 章节/原文要点**作证据
-- 试跑失败要写清：用例、现象、对应到哪条规则缺口
-- 禁止未读文件即宣称 skill 已达标
+- 先表后分：无 Expected vs Actual 表不得给 verdict
+- 低分项引用**文件路径 + 章节/原文要点**
+- 试跑失败写清：用例、现象、对应 E# / 规则缺口
+- 禁止未读文件即宣称达标

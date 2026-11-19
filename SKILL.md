@@ -1,124 +1,44 @@
 ---
 name: auto-iterate
 description: >-
-  自动迭代编排器：先根据用户前期意图识别模式，再进入图片迭代或 skill 迭代。
-  图片迭代对输入图按目标与样式多轮「产出→评测→诊断→再改」直至达标；
-  skill 迭代对 SKILL.md / references 等多轮「改写→评测→诊断→再改」直至达标。
-  在用户要求自动迭代、多轮评测修图、迭代改 skill、调试 skill、达标为止时使用。
+  对开发中的功能、现有系统指标、图片、skill 或可编辑交付物进行有证据的多轮迭代。适用于用户要求反复实现、验证、诊断和修正直至达标的任务；普通一次性修改无需启用。
 disable-model-invocation: true
 ---
 
-# 自动迭代（图片 / Skill）
+# 自动迭代
 
-本 skill 是迭代编排器，不代替具体画风 skill。每次调用先做**意图识别**，再进入唯一模式，禁止混跑。
+先识别真正要改的对象，再用同一份验收清单逐轮改进。此 skill 编排迭代，不替代对象专用的创作、编辑或验证流程。
 
-## 执行总序
+## 路由
 
-```
-1. Intent   识别 iterate_mode = image | skill
-2. Brief    按模式补齐输入契约（缺项先问）
-3. Loop     该模式的 产出 → 评测 → 诊断 → 再迭代
-4. Final    输出终稿 / 当前最佳 + 轮次摘要
-```
+读 [意图路由](references/00-intent-routing.md)，选一个 `iterate_mode`：
 
-未写出 `iterate_mode` 与判定依据前，不得开始 Produce。
+| 模式 | 主交付 |
+|---|---|
+| `image` | 图片或图像文件 |
+| `skill` | `SKILL.md` 及配套资源 |
+| `feature` | 可运行的软件功能、交互或端到端行为，可能跨多个文件 |
+| `optimization` | 已有功能或流程的可测指标，如速度、稳定性、成本、准确率或可用性 |
+| `artifact` | 其他可编辑交付物，如文档、代码、提示词、表格、演示稿、网页或设计文件 |
 
-## Step 0 — 意图识别
+按主交付物而非所用工具分类。对象不明确且无法从上下文推断时才询问。用户改目标时更新 Brief；改主交付物时重新路由。
 
-读取 [references/00-intent-routing.md](references/00-intent-routing.md)，根据用户**本轮及前期表述**判定模式。
+## 执行
 
-输出固定结构后再继续：
+1. 按 [Brief 与预期清单](references/01-brief-and-expected.md)记录对象、目标、约束、可观察的验收条件和轮次上限（默认最多 5 轮）。从现有上下文推断已知信息；只询问无法推断的关键缺口。
+2. 每轮执行 `Plan → Produce → Verify → Evaluate → Diagnose/Finish`。产出方式见 [宿主对接](references/03-produce-host.md)，证据、停滞处理与版本恢复见 [轮次协议](references/02-round-protocol.md)。
+3. 每轮实际检查产物，逐项记录 `expected / actual / met|partial|unmet|unverified`。验证方法应适合对象：看图、通读、渲染、运行测试、操作功能或检查实际输出。不能用“已修改”代替“已达标”。
+4. 未达标时，针对失败项做最小充分修改，并回归检查已达标项。无需逐轮等待确认，除非用户要求。
+5. 达标、达到轮次上限、用户停止，或继续执行需要未获授权的外部动作/显著成本时停止。交付最佳可用版本、验证证据与剩余问题；不得把未执行的验证说成通过。
 
-```markdown
-## Intent
-- iterate_mode: image | skill
-- confidence: high | medium | low
-- evidence: 引用用户原话或关键信号（1–3 条）
-- not_the_other_because: 为何不是另一模式（一句话）
-```
+## 模式细则
 
-规则摘要：
+- `image`：读 [图片循环](references/10-image-loop.md)、[评测](references/11-image-evaluation-rubric.md)、[诊断](references/12-image-gap-analysis.md)。画风要求以用户指定的 style skill 为准。
+- `skill`：读 [Skill 循环](references/20-skill-loop.md)、[评测](references/21-skill-evaluation-rubric.md)、[诊断](references/22-skill-gap-analysis.md)。试跑产物是证据，主交付是 skill 文件。
+- `feature`：读 [功能循环](references/40-feature-loop.md)。以用户可观察的行为和验收场景为准，按需修改多个文件。
+- `optimization`：读 [指标优化循环](references/50-optimization-loop.md)。先测基线，再按同一方法比较改动前后。
+- `artifact`：读 [通用交付物循环](references/30-artifact-loop.md)。先确定具体文件类型及其专用工具/skill，再选择有效验证。
 
-| 模式 | 迭代对象 | 典型说法 |
-|------|----------|----------|
-| `image` | 图片像素结果 | 改图、修图、出图到达标、按样式迭代画面 |
-| `skill` | skill 文本与规则文件 | 写/改 skill、调试 SKILL.md、补 references、把 skill 打磨达标 |
+## 记录与边界
 
-易混：
-
-- 「用某某 skill 把这张图改到过关」→ **image**（skill 是工具，图是迭代对象）
-- 「把某某 skill 改到能稳定出对的图」→ **skill**（skill 文件是迭代对象；可用试跑图作评测证据）
-
-`confidence: low` 或信号冲突时：用一句话向用户确认模式，得到答复后再进入 Brief。用户也可显式指定：`模式：图片迭代` / `模式：skill 迭代`。
-
-会话中途仅当用户明确要求切换模式时才重跑 Intent；否则锁定首轮模式。
-
-## Step 1 — Brief（按模式）
-
-### 模式 A：`image`
-
-必填：`source_image`、`goal`、`target_style`  
-可选：`acceptance`、`max_rounds`（默认 5）、`lock`、`style_skill`
-
-详见 [references/10-image-loop.md](references/10-image-loop.md)。
-
-### 模式 B：`skill`
-
-必填：`skill_path`（目标 skill 目录或 `SKILL.md`）、`goal`（skill 应具备的能力/行为）、`done_when`（达标标准）  
-可选：`acceptance`、`max_rounds`（默认 5）、`base_skill`（可参考的现有 skill）、`smoke_cases`（试跑用例：提示词/测图）
-
-详见 [references/20-skill-loop.md](references/20-skill-loop.md)。
-
-## Step 2 — 核心循环（两模式共用骨架）
-
-```
-Round N:
-  1. Plan
-  2. Produce   # image→出图；skill→改 skill 文件（可附带试跑）
-  3. Evaluate  # 看实际产物，禁止只凭自称达标
-  4. Decide    # pass 结束；fail 则 Diagnose → N+1；达上限结束
-```
-
-- 禁止跳过评测连跑多轮
-- 下一轮 Plan 必须消费上轮 Diagnosis
-- 默认最小充分修改，已通过项写入 preserve
-
-### 模式路由
-
-| `iterate_mode` | 循环细则 | 评测 | 诊断 | 示例 |
-|----------------|----------|------|------|------|
-| `image` | [10-image-loop.md](references/10-image-loop.md) | [11-image-evaluation-rubric.md](references/11-image-evaluation-rubric.md) | [12-image-gap-analysis.md](references/12-image-gap-analysis.md) | [13-image-example.md](references/13-image-example.md) |
-| `skill` | [20-skill-loop.md](references/20-skill-loop.md) | [21-skill-evaluation-rubric.md](references/21-skill-evaluation-rubric.md) | [22-skill-gap-analysis.md](references/22-skill-gap-analysis.md) | [23-skill-example.md](references/23-skill-example.md) |
-
-进入循环前，只加载当前模式对应的 references。
-
-## 停止条件
-
-1. `verdict: pass`
-2. 已完成 `max_rounds`
-3. 用户要求停止或改目标（改目标则更新 Brief；改模式则重跑 Intent）
-
-## 会话落盘（建议）
-
-```
-runs/<session_id>/
-  intent.md
-  brief.md
-  round-01.*          # image: png + eval；skill: diff 摘要 + eval（+ 可选试跑图）
-  ...
-  final.md
-```
-
-## 输出给用户
-
-1. 判定的 `iterate_mode`
-2. 终稿（图路径，或 skill 文件变更摘要）
-3. 是否达标、轮次摘要
-4. 未达标时的遗留问题与建议决策点
-
-## 边界
-
-- 一次会话一个主模式；需要两种结果时分两次意图清晰的任务跑
-- 不代替具体画风 skill 的视觉规则；image 模式下画风细节以 `style_skill` 为准
-- skill 模式下试跑出图是**评测证据**，不是主交付物（除非用户同时要图）
-- 评测必须基于实际产物（看图 / 读改后的 skill 全文）
+可在 `runs/<session_id>/` 保存 `intent.md`、`brief.md`、每轮产物与评测、`final.md`；若会污染目标仓库，可用任务临时目录。维护可恢复的 `best_so_far`，失败时不要默认交最后一轮；选择历史最佳版后要实际恢复或说明无法安全恢复。不得为了过关删改用户硬性条件；每轮修改均受原任务授权和工具权限约束，尤其是发布、发送、部署与其他外部写入。

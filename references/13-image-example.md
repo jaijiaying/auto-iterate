@@ -2,49 +2,39 @@
 
 ## Intent
 
-```markdown
-## Intent
-- iterate_mode: image
-- confidence: high
-- evidence: 用户提供输入图，要求改场景与样式直到画面过关
-- not_the_other_because: 交付物是图，不是改 skill 文件
-```
+- iterate_mode: image / confidence: high
+- evidence: 提供输入图并要求改场景与样式直到画面过关
+- not_the_other_because: 交付物是图
 
-## 用户输入
+## Brief（节选）
 
-- `source_image`: 两个小孩在公园的插图
-- `goal`: 改成教室内上课，保留两孩身份与座位关系，黑板上写「春天」
-- `target_style`: 专黑细线、马卡龙配色教材插画
-- `lock`: 两个小孩的脸型与发型
-- `max_rounds`: 5
+- source_image: 公园双童图
+- goal: 改成教室上课；保留两孩身份与座位；黑板写「春天」
+- target_style: 专黑细线 + 马卡龙教材风
+- lock: 两童脸型发型
+- expected_checklist:
+  - E1 教室场景（课桌/黑板）可见
+  - E2 两童可辨且相对位置保留
+  - E3 黑板「春天」清晰可读
+  - E4 描边为专黑细线、配色马卡龙
+  - E5 脸型发型相对输入可辨（lock）
 
 ## Round 1
 
-**Plan** → 公园改教室；保留相对位置；套专黑细线+马卡龙；板书「春天」
+Produce → `round-01.png`
 
-**Produce** → `runs/20261105-1523/round-01.png`
+| id | status | actual |
+|----|--------|--------|
+| E1 | met | 有课桌黑板 |
+| E2 | met | 两童座位关系保留 |
+| E3 | unmet | 板书乱码 |
+| E4 | met | 线色基本符合 |
+| E5 | met | 脸型可辨 |
 
-```markdown
-## Round 1 Evaluation
-- score_goal: 3
-- score_style: 4
-- score_fidelity: 4
-- score_quality: 3
-- hard_fail: ["黑板文字不可读"]
-- verdict: fail
-- summary: 教室基本成立，板书乱码，右童手部粘连。
-```
-
-```markdown
-## Round 1 Diagnosis
-1. [P0] 黑板「春天」不可读 → 板书笔画混乱 → 仅重绘黑板文字
-2. [P1] 右童右手粘连 → 袖口手部糊成一块 → 局部修手
-- preserve_next: 两童脸型发型、教室大构图、专黑线与配色
-- redraw_scope: local
-```
+verdict: fail（E3 hard_fail）；手部粘连 → quality 3  
+Diagnosis: P0 重绘板书；P1 局部修手；scope=local
 
 ## Round 2
 
-**Produce** → `round-02.png` → `verdict: pass`（四项 ≥ 4，无 hard_fail）
-
-**Final**：终稿 `round-02.png`，达标，共 2 轮
+局部修 → E3/质量过关 → 清单全 met → pass  
+Final: `round-02.png`，best_round=2

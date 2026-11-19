@@ -1,6 +1,8 @@
 # 评测量表（图片模式）
 
-仅当 `iterate_mode: image` 时使用。对每一轮候选图，相对 `source_image`、`goal`、`target_style`、`lock`、`acceptance` 打分。必须先看全图，再对可疑区域放大检查。
+仅当 `iterate_mode: image` 时使用。先按 [02-round-protocol.md](02-round-protocol.md) 完成 **Expected vs Actual**（对照 Brief 的 `expected_checklist`），再打分。必须先看全图，再对可疑区域放大检查。
+
+打分锚点：`source_image`、`goal`、`target_style`、`lock`、`acceptance`、清单逐条状态。
 
 ## 四维分数（各 0–5）
 
@@ -50,17 +52,18 @@
 
 ## 硬伤 hard_fail（任一即 fail）
 
-- 未落实 `goal` 中的硬性要求（数量、对象在场、指定动作、指定文字内容等）
-- 明确违反 `target_style` 的硬约束（例如要求纯黑细线却出现彩线；要求双色却出现多色渐变）
-- 破坏 `lock` 项
+- 清单中硬性项 `unmet`（数量、对象、动作、指定文字等）
+- 明确违反 `target_style` 硬约束（如要纯黑细线却彩线；要双色却多色渐变）
+- 破坏 `lock` 或上轮已 met 项出现回归
 - 严重解剖/透视/遮挡错误导致主体不可用
-- 文字需求下出现不可读乱码（若目标含文字）
-- 用户 `acceptance` 中任一条未满足
+- 文字需求下出现不可读乱码
+- 用户 `acceptance` 任一条未满足
 
 ## 达标判定
 
 ```
 pass  ⟺  hard_fail 为空
+      ∧  清单硬性项全部 met
       ∧  score_goal ≥ 4
       ∧  score_style ≥ 4
       ∧  score_fidelity ≥ 4
@@ -68,10 +71,11 @@ pass  ⟺  hard_fail 为空
       ∧  （若有 acceptance，则全部满足）
 ```
 
-否则 `fail`。
+否则 `fail`。同步更新 `best_so_far`（见 02）。
 
 ## 评测写法要求
 
-- 每个低于 5 的分数至少给一条**可见证据**（描述画面位置与现象）
-- `hard_fail` 必须可复核，禁止空泛形容词（如「不太好」）
-- 首轮与后续轮使用同一量表，便于比较是否进步
+- 先表后分：无 Expected vs Actual 表不得给 verdict
+- 低于 5 分的维度至少一条可见证据（位置 + 现象）
+- `hard_fail` / `actual` 可复核，禁止「不太好」
+- 各轮同一量表，便于看是否进步
